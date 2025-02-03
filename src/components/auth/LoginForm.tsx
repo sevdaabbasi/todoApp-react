@@ -1,24 +1,31 @@
 import React from "react";
 import { useForm } from "react-hook-form";
-import { LoginCredentials } from "../../types/auth";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
+
+interface LoginFormData {
+  username: string;
+  password: string;
+  email: string;
+}
 
 export default function LoginForm() {
   const { login } = useAuth();
+  const navigate = useNavigate();
   const {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
     setError,
-  } = useForm<LoginCredentials>();
+  } = useForm<LoginFormData>();
 
-  const onSubmit = async (data: LoginCredentials) => {
+  const onSubmit = async (data: LoginFormData) => {
     try {
       await login(data);
+      navigate("/"); // Başarılı girişten sonra ana sayfaya yönlendir
     } catch (error) {
       setError("root", {
-        message: "Invalid email or password",
+        message: "Invalid credentials",
       });
     }
   };
@@ -30,6 +37,22 @@ export default function LoginForm() {
           Welcome Back
         </h2>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Username
+            </label>
+            <input
+              {...register("username", { required: "Username is required" })}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              placeholder="Enter username"
+            />
+            {errors.username && (
+              <p className="mt-1 text-sm text-red-600">
+                {errors.username.message}
+              </p>
+            )}
+          </div>
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Email
@@ -44,7 +67,7 @@ export default function LoginForm() {
               })}
               type="email"
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-              placeholder="Enter your email"
+              placeholder="Enter email"
             />
             {errors.email && (
               <p className="mt-1 text-sm text-red-600">
@@ -67,7 +90,7 @@ export default function LoginForm() {
               })}
               type="password"
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-              placeholder="Enter your password"
+              placeholder="Enter password"
             />
             {errors.password && (
               <p className="mt-1 text-sm text-red-600">
@@ -75,6 +98,12 @@ export default function LoginForm() {
               </p>
             )}
           </div>
+
+          {errors.root && (
+            <p className="text-sm text-red-600 text-center">
+              {errors.root.message}
+            </p>
+          )}
 
           <button
             type="submit"

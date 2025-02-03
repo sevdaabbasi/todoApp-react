@@ -1,46 +1,83 @@
-import React from "react";
+import React, { useState } from "react";
 import { useForm } from "react-hook-form";
-import { SignupCredentials } from "../../types/auth";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { api } from "../../services/api";
 
-interface SignupFormProps {
-  onSubmit: (data: SignupCredentials) => void;
+interface SignupFormData {
+  username: string;
+  email: string;
+  password: string;
+  confirmPassword: string;
+  firstName: string;
+  lastName: string;
+  phoneNumber: string;
+  dateOfBirth: string;
+  gender: string;
 }
 
-export default function SignupForm({ onSubmit }: SignupFormProps) {
+export default function SignupForm() {
+  const navigate = useNavigate();
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const {
     register,
     handleSubmit,
     watch,
-    formState: { errors, isSubmitting },
-  } = useForm<SignupCredentials>();
+    formState: { errors },
+    setError,
+  } = useForm<SignupFormData>();
 
   const password = watch("password");
 
+  const onSubmit = async (data: SignupFormData) => {
+    if (data.password !== data.confirmPassword) {
+      setError("confirmPassword", {
+        message: "Passwords do not match",
+      });
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      await api.auth.signup({
+        username: data.username,
+        email: data.email,
+        password: data.password,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        phoneNumber: data.phoneNumber,
+        dateOfBirth: new Date(data.dateOfBirth).toISOString(),
+        gender: data.gender,
+      });
+      navigate("/login");
+    } catch (error) {
+      setError("root", {
+        message: "Signup failed. Please try again.",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 to-blue-50">
-      <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md">
+      <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md my-8">
         <h2 className="text-3xl font-bold text-gray-800 mb-6 text-center">
           Create Account
         </h2>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Full Name
+              Username
             </label>
             <input
-              {...register("name", {
-                required: "Name is required",
-                minLength: {
-                  value: 2,
-                  message: "Name must be at least 2 characters",
-                },
-              })}
+              {...register("username", { required: "Username is required" })}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-              placeholder="Enter your name"
+              placeholder="Enter username"
             />
-            {errors.name && (
-              <p className="mt-1 text-sm text-red-600">{errors.name.message}</p>
+            {errors.username && (
+              <p className="mt-1 text-sm text-red-600">
+                {errors.username.message}
+              </p>
             )}
           </div>
 
@@ -58,11 +95,103 @@ export default function SignupForm({ onSubmit }: SignupFormProps) {
               })}
               type="email"
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-              placeholder="Enter your email"
+              placeholder="Enter email"
             />
             {errors.email && (
               <p className="mt-1 text-sm text-red-600">
                 {errors.email.message}
+              </p>
+            )}
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                First Name
+              </label>
+              <input
+                {...register("firstName", {
+                  required: "First name is required",
+                })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                placeholder="First name"
+              />
+              {errors.firstName && (
+                <p className="mt-1 text-sm text-red-600">
+                  {errors.firstName.message}
+                </p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Last Name
+              </label>
+              <input
+                {...register("lastName", { required: "Last name is required" })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                placeholder="Last name"
+              />
+              {errors.lastName && (
+                <p className="mt-1 text-sm text-red-600">
+                  {errors.lastName.message}
+                </p>
+              )}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Phone Number
+            </label>
+            <input
+              {...register("phoneNumber", {
+                required: "Phone number is required",
+              })}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              placeholder="Enter phone number"
+            />
+            {errors.phoneNumber && (
+              <p className="mt-1 text-sm text-red-600">
+                {errors.phoneNumber.message}
+              </p>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Date of Birth
+            </label>
+            <input
+              type="date"
+              {...register("dateOfBirth", {
+                required: "Date of birth is required",
+              })}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            />
+            {errors.dateOfBirth && (
+              <p className="mt-1 text-sm text-red-600">
+                {errors.dateOfBirth.message}
+              </p>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Gender
+            </label>
+            <select
+              {...register("gender", { required: "Gender is required" })}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            >
+              <option value="">Select gender</option>
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+              <option value="other">Other</option>
+            </select>
+            {errors.gender && (
+              <p className="mt-1 text-sm text-red-600">
+                {errors.gender.message}
               </p>
             )}
           </div>
@@ -72,6 +201,7 @@ export default function SignupForm({ onSubmit }: SignupFormProps) {
               Password
             </label>
             <input
+              type="password"
               {...register("password", {
                 required: "Password is required",
                 minLength: {
@@ -79,9 +209,8 @@ export default function SignupForm({ onSubmit }: SignupFormProps) {
                   message: "Password must be at least 6 characters",
                 },
               })}
-              type="password"
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-              placeholder="Create a password"
+              placeholder="Create password"
             />
             {errors.password && (
               <p className="mt-1 text-sm text-red-600">
@@ -95,14 +224,14 @@ export default function SignupForm({ onSubmit }: SignupFormProps) {
               Confirm Password
             </label>
             <input
+              type="password"
               {...register("confirmPassword", {
                 required: "Please confirm your password",
                 validate: (value) =>
                   value === password || "Passwords do not match",
               })}
-              type="password"
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-              placeholder="Confirm your password"
+              placeholder="Confirm password"
             />
             {errors.confirmPassword && (
               <p className="mt-1 text-sm text-red-600">
@@ -110,6 +239,12 @@ export default function SignupForm({ onSubmit }: SignupFormProps) {
               </p>
             )}
           </div>
+
+          {errors.root && (
+            <p className="text-sm text-red-600 text-center">
+              {errors.root.message}
+            </p>
+          )}
 
           <button
             type="submit"
