@@ -1,46 +1,88 @@
 import React, { useState } from "react";
-import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
-import TodoCard from "../components/TodoCard";
-import TodoFilters from "../components/TodoFilters";
 import { Todo, TodoStatus } from "../types/todo";
+import Header from "../components/layout/Header";
+import TodoList from "../components/todo/TodoList";
+import TodoFilters from "../components/todo/TodoFilters";
+import TodoForm from "../components/todo/TodoForm";
+import AddTodoButton from "../components/todo/AddTodoButton";
+import { v4 as uuidv4 } from "uuid";
 
 // Geçici mock data
 const initialTodos: Todo[] = [
   {
     id: "1",
-    title: "Complete Project Proposal",
-    description: "Write and submit the project proposal for the new client",
+    title: "Design New Landing Page",
+    description:
+      "Create a modern and responsive landing page design for the company website",
+    deadline: "2024-03-25",
+    status: "IN_PROGRESS",
+  },
+  {
+    id: "2",
+    title: "Update User Documentation",
+    description: "Review and update the user documentation with new features",
     deadline: "2024-03-20",
     status: "TODO",
   },
   {
-    id: "2",
-    title: "Review Code",
-    description: "Review pull requests and merge approved changes",
+    id: "3",
+    title: "Bug Fixes for Release",
+    description: "Fix reported bugs before the next release",
     deadline: "2024-03-15",
-    status: "IN_PROGRESS",
+    status: "DONE",
   },
-  // Daha fazla todo eklenebilir
 ];
 
-function TodoScreen() {
+export default function TodoScreen() {
   const [todos, setTodos] = useState<Todo[]>(initialTodos);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<TodoStatus | "ALL">("ALL");
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editingTodo, setEditingTodo] = useState<Todo | undefined>(undefined);
+
+  const handleAddTodo = (data: Omit<Todo, "id">) => {
+    const newTodo: Todo = {
+      id: uuidv4(),
+      ...data,
+    };
+    setTodos((prev) => [newTodo, ...prev]);
+    setIsFormOpen(false);
+  };
+
+  const handleEditTodo = (data: Omit<Todo, "id">) => {
+    if (!editingTodo) return;
+
+    setTodos((prev) =>
+      prev.map((todo) =>
+        todo.id === editingTodo.id ? { ...todo, ...data } : todo
+      )
+    );
+    setEditingTodo(undefined);
+    setIsFormOpen(false);
+  };
 
   const handleDelete = (id: string) => {
-    setTodos(todos.filter((todo) => todo.id !== id));
+    setTodos((prev) => prev.filter((todo) => todo.id !== id));
   };
 
   const handleEdit = (todo: Todo) => {
-    // Edit modal/form açılacak
-    console.log("Edit todo:", todo);
+    setEditingTodo(todo);
+    setIsFormOpen(true);
   };
 
   const handleStatusChange = (id: string, status: TodoStatus) => {
-    setTodos(
-      todos.map((todo) => (todo.id === id ? { ...todo, status } : todo))
+    setTodos((prev) =>
+      prev.map((todo) => (todo.id === id ? { ...todo, status } : todo))
     );
+  };
+
+  const handleReorder = (oldIndex: number, newIndex: number) => {
+    setTodos((prev) => {
+      const result = Array.from(prev);
+      const [removed] = result.splice(oldIndex, 1);
+      result.splice(newIndex, 0, removed);
+      return result;
+    });
   };
 
   const filteredTodos = todos.filter((todo) => {
@@ -52,64 +94,55 @@ function TodoScreen() {
     return matchesSearch && matchesStatus;
   });
 
-  const onDragEnd = (result: any) => {
-    if (!result.destination) return;
-
-    const items = Array.from(todos);
-    const [reorderedItem] = items.splice(result.source.index, 1);
-    items.splice(result.destination.index, 0, reorderedItem);
-
-    setTodos(items);
-  };
-
   return (
-    <div className="min-h-screen bg-gray-50 py-8 px-4">
-      <div className="max-w-4xl mx-auto">
-        <h1 className="text-3xl font-bold text-gray-800 mb-8 text-center">
-          My Todo List
-        </h1>
+    <div className="min-h-screen bg-gray-50">
+      <Header />
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="flex justify-between items-center mb-8">
+          <h2 className="text-2xl font-bold text-gray-900">My Tasks</h2>
+          <button
+            onClick={() => {
+              setEditingTodo(undefined);
+              setIsFormOpen(true);
+            }}
+            className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+          >
+            Add New Task
+          </button>
+        </div>
 
         <TodoFilters
           search={search}
-          setSearch={setSearch}
+          onSearchChange={setSearch}
           statusFilter={statusFilter}
-          setStatusFilter={setStatusFilter}
+          onStatusFilterChange={setStatusFilter}
         />
 
-        <DragDropContext onDragEnd={onDragEnd}>
-          <Droppable droppableId="todos">
-            {(provided) => (
-              <div
-                {...provided.droppableProps}
-                ref={provided.innerRef}
-                className="space-y-4"
-              >
-                {filteredTodos.map((todo, index) => (
-                  <Draggable key={todo.id} draggableId={todo.id} index={index}>
-                    {(provided) => (
-                      <div
-                        ref={provided.innerRef}
-                        {...provided.draggableProps}
-                        {...provided.dragHandleProps}
-                      >
-                        <TodoCard
-                          todo={todo}
-                          onDelete={handleDelete}
-                          onEdit={handleEdit}
-                          onStatusChange={handleStatusChange}
-                        />
-                      </div>
-                    )}
-                  </Draggable>
-                ))}
-                {provided.placeholder}
-              </div>
-            )}
-          </Droppable>
-        </DragDropContext>
-      </div>
+        <TodoList
+          todos={filteredTodos}
+          onDelete={handleDelete}
+          onEdit={handleEdit}
+          onStatusChange={handleStatusChange}
+          onReorder={handleReorder}
+        />
+
+        <TodoForm
+          isOpen={isFormOpen}
+          onClose={() => {
+            setIsFormOpen(false);
+            setEditingTodo(undefined);
+          }}
+          onSubmit={editingTodo ? handleEditTodo : handleAddTodo}
+          todo={editingTodo}
+        />
+
+        <AddTodoButton
+          onClick={() => {
+            setEditingTodo(undefined);
+            setIsFormOpen(true);
+          }}
+        />
+      </main>
     </div>
   );
 }
-
-export default TodoScreen;
